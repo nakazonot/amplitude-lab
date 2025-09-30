@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>実験用 登録フォーム</title>
+  <style>
+    :root {
+      --bg: #f7f7f8;
+      --card: #ffffff;
+      --text: #1f2328;
+      --muted: #6a737d;
+      --primary: #1f6feb;
+      --danger: #d93025;
+      --ok: #15803d;
+      --border: #e5e7eb;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; padding: 24px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      color: var(--text); background: linear-gradient(180deg, var(--bg), #eef2f6);
+      display: grid; place-items: start center;
+    }
+
+    .wrap {
+      width: 100%; max-width: 560px; background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; box-shadow: 0 10px 24px rgba(0,0,0,0.04);
+      margin-top: 4vh;
+    }
+
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .desc { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+
+    form { display: grid; gap: 14px; }
+
+    label { font-size: 14px; font-weight: 600; display: block; margin-bottom: 6px; }
+    .req { color: var(--primary); font-weight: 700; margin-left: 6px; }
+
+    .field {
+      display: grid; gap: 6px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid var(--border); background: #fff; font-size: 16px;
+      outline: none;
+    }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31,111,235,0.15); }
+
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+    .toggle {
+      padding: 10px 12px; border: 1px solid var(--border); background: #fafafa; border-radius: 10px;
+      cursor: pointer; font-size: 13px;
+    }
+
+    .hint { color: var(--muted); font-size: 12px; }
+
+    .errors, .ok {
+      font-size: 13px; line-height: 1.5;
+      padding: 10px 12px; border-radius: 10px; border: 1px solid;
+      display: none;
+    }
+    .errors { color: var(--danger); border-color: #f3c6c2; background: #fff5f4; }
+    .ok { color: var(--ok); border-color: #b5e0c8; background: #f0fff7; }
+
+    .pw-meter { height: 8px; background: #eef2f6; border-radius: 999px; overflow: hidden; }
+    .pw-meter > i { display: block; height: 100%; width: 0%; background: var(--danger); transition: width .25s; }
+    .pw-label { font-size: 12px; color: var(--muted); }
+
+    .terms { display: flex; gap: 10px; align-items: start; }
+    .terms input { margin-top: 3px; }
+
+    button[type="submit"] {
+      margin-top: 6px;
+      width: 100%; padding: 12px 16px; border: 0; border-radius: 12px;
+      background: var(--primary); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+    button[disabled] { opacity: .6; cursor: not-allowed; }
+
+    footer { margin-top: 18px; font-size: 12px; color: var(--muted); text-align: center; }
+    .sr-only { position: absolute; left: -9999px; }
+
+    /* 小さめ画面 */
+    @media (max-width: 420px) {
+      .row { grid-template-columns: 1fr 1fr; }
+      .toggle { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap" role="main" aria-labelledby="title">
+    <h1 id="title">登録フォーム（実験用）</h1>
+    <p class="desc">クライアントサイドのみで動作するデモです。送信すると画面上に成功メッセージを表示します。</p>
+
+    <!-- 成功/エラー表示 -->
+    <div id="ok" class="ok" role="status" aria-live="polite">登録に成功しました（ダミー）。計測イベントを送信しました。</div>
+    <div id="errors" class="errors" role="alert" aria-live="assertive"></div>
+
+    <form id="signup" novalidate>
+      <div class="field">
+        <label for="name">お名前<span class="req">＊</span></label>
+        <input id="name" name="name" type="text" autocomplete="name" inputmode="text" required minlength="2" maxlength="60" placeholder="山田 太郎" />
+        <div class="hint">2〜60文字</div>
+      </div>
+
+      <div class="field">
+        <label for="email">メールアドレス<span class="req">＊</span></label>
+        <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+        <div class="hint">有効なメール形式で入力してください</div>
+      </div>
+
+      <div class="field">
+        <label for="password">パスワード<span class="req">＊</span></label>
+        <div class="row">
+          <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="8文字以上・英大小・数字・記号を推奨" />
+          <button type="button" class="toggle" id="togglePw">表示</button>
+        </div>
+        <div class="pw-meter" aria-hidden="true"><i id="pwBar"></i></div>
+        <div id="pwLabel" class="pw-label">強度: 弱</div>
+      </div>
+
+      <div class="field">
+        <label for="passwordConfirm">パスワード（確認）<span class="req">＊</span></label>
+        <input id="passwordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" required />
+      </div>
+
+      <div class="terms">
+        <input id="agree" name="agree" type="checkbox" required />
+        <label for="agree">利用規約に同意します</label>
+      </div>
+
+      <button id="submit" type="submit">登録する</button>
+
+      <!-- 実験用メタ（Amplitudeで拾いやすいようデータ属性を用意） -->
+      <input type="hidden" id="expBucket" name="expBucket" value="control" data-amplitude-prop="experiment_bucket" />
+    </form>
+
+    <footer>© <span id="year"></span> Experiment Form</footer>
+  </main>
+
+  <script src="https://cdn.amplitude.com/libs/analytics-browser-2.11.1-min.js.gz"></script>
+  <script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.8.0-min.js.gz"></script>
+  <script>
+    window.amplitude.add(window.sessionReplay.plugin({sampleRate: 1}));window.amplitude.init('8a1c15ae08b3953efc4603c8e3f1e10a', {"autocapture":{"elementInteractions":true}});
+  </script>
+
+  <script>
+    // 年表示
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // パスワード強度判定（簡易）
+    const pw = document.getElementById('password');
+    const pwBar = document.getElementById('pwBar');
+    const pwLabel = document.getElementById('pwLabel');
+    function scorePassword(v) {
+      let s = 0;
+      if (!v) return 0;
+      if (v.length >= 8) s += 25;
+      if (/[A-Z]/.test(v)) s += 20;
+      if (/[a-z]/.test(v)) s += 20;
+      if (/\d/.test(v)) s += 20;
+      if (/[^A-Za-z0-9]/.test(v)) s += 15;
+      return Math.min(s, 100);
+    }
+    function setPwUI(score) {
+      pwBar.style.width = score + '%';
+      if (score < 40) { pwBar.style.background = '#d93025'; pwLabel.textContent = '強度: 弱'; }
+      else if (score < 70) { pwBar.style.background = '#f59e0b'; pwLabel.textContent = '強度: 中'; }
+      else { pwBar.style.background = '#15803d'; pwLabel.textContent = '強度: 強'; }
+    }
+    pw.addEventListener('input', e => setPwUI(scorePassword(e.target.value)));
+    setPwUI(0);
+
+    // パスワード表示切替
+    document.getElementById('togglePw').addEventListener('click', () => {
+      const type = pw.type === 'password' ? 'text' : 'password';
+      pw.type = type;
+      document.getElementById('togglePw').textContent = type === 'text' ? '非表示' : '表示';
+    });
+
+    // フォーム送信（GitHub Pages想定なので実送信せず、デモ用にpreventDefault）
+    const form = document.getElementById('signup');
+    const ok = document.getElementById('ok');
+    const errs = document.getElementById('errors');
+
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      ok.style.display = 'none';
+      errs.style.display = 'none';
+      errs.innerHTML = '';
+
+      // 基本チェック
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('passwordConfirm').value;
+      const agree = document.getElementById('agree').checked;
+
+      const problems = [];
+      if (name.length < 2) problems.push('お名前は2文字以上で入力してください。');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problems.push('メールアドレスの形式が正しくありません。');
+      if (password.length < 8) problems.push('パスワードは8文字以上にしてください。');
+      if (password !== passwordConfirm) problems.push('パスワード（確認）が一致しません。');
+      if (!agree) problems.push('利用規約に同意してください。');
+
+      if (problems.length) {
+        errs.innerHTML = problems.map(p => `• ${p}`).join('<br>');
+        errs.style.display = 'block';
+        return;
+      }
+
+      // ここで実サーバに送るなら fetch などでPOSTする（デモなので送信しない）
+      // fetch('/api/signup', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...}) })
+
+      // ▼ Amplitude イベント送信（SDKを読み込んだ場合のみ）
+      // if (window.amplitude && amplitude.getInstance) {
+      //   const props = {
+      //     experiment_bucket: document.getElementById('expBucket').value,
+      //     email_domain: email.split('@')[1] || '',
+      //   };
+      //   amplitude.getInstance().logEvent('signup_submitted', props);
+      // }
+
+      ok.style.display = 'block';
+      form.reset();
+      setPwUI(0);
+    });
+  </script>
+</body>
+</html>
