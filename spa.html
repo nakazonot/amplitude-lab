@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>React版 登録フォーム</title>
+  <style>
+    :root {
+      --bg: #f7f7f8;
+      --card: #ffffff;
+      --text: #1f2328;
+      --muted: #6a737d;
+      --primary: #1f6feb;
+      --danger: #d93025;
+      --ok: #15803d;
+      --border: #e5e7eb;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; padding: 24px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      color: var(--text); background: linear-gradient(180deg, var(--bg), #eef2f6);
+      display: grid; place-items: start center;
+    }
+
+    .wrap {
+      width: 100%; max-width: 560px; background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; box-shadow: 0 10px 24px rgba(0,0,0,0.04);
+      margin-top: 4vh;
+    }
+
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .desc { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+
+    form { display: grid; gap: 14px; }
+
+    label { font-size: 14px; font-weight: 600; display: block; margin-bottom: 6px; }
+    .req { color: var(--primary); font-weight: 700; margin-left: 6px; }
+
+    .field { display: grid; gap: 6px; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid var(--border); background: #fff; font-size: 16px;
+      outline: none;
+    }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(31,111,235,0.15); }
+
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+    .toggle {
+      padding: 10px 12px; border: 1px solid var(--border); background: #fafafa; border-radius: 10px;
+      cursor: pointer; font-size: 13px;
+    }
+
+    .hint { color: var(--muted); font-size: 12px; }
+
+    .errors, .ok {
+      font-size: 13px; line-height: 1.5;
+      padding: 10px 12px; border-radius: 10px; border: 1px solid;
+      display: none;
+    }
+    .errors { color: var(--danger); border-color: #f3c6c2; background: #fff5f4; }
+    .ok { color: var(--ok); border-color: #b5e0c8; background: #f0fff7; }
+
+    .pw-meter { height: 8px; background: #eef2f6; border-radius: 999px; overflow: hidden; }
+    .pw-meter > i { display: block; height: 100%; width: 0%; background: var(--danger); transition: width .25s; }
+    .pw-label { font-size: 12px; color: var(--muted); }
+
+    .terms { display: flex; gap: 10px; align-items: start; }
+    .terms input { margin-top: 3px; }
+
+    button[type="submit"] {
+      margin-top: 6px;
+      width: 100%; padding: 12px 16px; border: 0; border-radius: 12px;
+      background: var(--primary); color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+    }
+    button[disabled] { opacity: .6; cursor: not-allowed; }
+
+    footer { margin-top: 18px; font-size: 12px; color: var(--muted); text-align: center; }
+    .sr-only { position: absolute; left: -9999px; }
+
+    @media (max-width: 420px) {
+      .row { grid-template-columns: 1fr 1fr; }
+      .toggle { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <main id="root"></main>
+
+  <script src="https://cdn.amplitude.com/libs/analytics-browser-2.11.1-min.js.gz"></script>
+  <script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1.8.0-min.js.gz"></script>
+  <script type="text/javascript" src="https://cdn.amplitude.com/script/8a1c15ae08b3953efc4603c8e3f1e10a.experiment.js"></script>
+  <script>
+    window.amplitude.add(window.sessionReplay.plugin({sampleRate: 1}));
+    window.amplitude.init('8a1c15ae08b3953efc4603c8e3f1e10a', { autocapture: { elementInteractions: true } });
+  </script>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+    const currentYear = new Date().getFullYear();
+
+    const scorePassword = (value) => {
+      if (!value) return 0;
+      let score = 0;
+      if (value.length >= 8) score += 25;
+      if (/[A-Z]/.test(value)) score += 20;
+      if (/[a-z]/.test(value)) score += 20;
+      if (/\d/.test(value)) score += 20;
+      if (/[^A-Za-z0-9]/.test(value)) score += 15;
+      return Math.min(score, 100);
+    };
+
+    const getPwState = (score) => {
+      if (score < 40) return { label: '強度: 弱', color: '#d93025' };
+      if (score < 70) return { label: '強度: 中', color: '#f59e0b' };
+      return { label: '強度: 強', color: '#15803d' };
+    };
+
+    const initialForm = () => ({
+      name: '',
+      email: '',
+      password: '',
+      passwordConfirm: '',
+      agree: false,
+      expBucket: 'control',
+    });
+
+    const App = () => {
+      const [form, setForm] = useState(() => initialForm());
+      const [showPassword, setShowPassword] = useState(false);
+      const [status, setStatus] = useState({ ok: false, errors: [] });
+
+      const pwScore = useMemo(() => scorePassword(form.password), [form.password]);
+      const pwState = useMemo(() => getPwState(pwScore), [pwScore]);
+
+      const updateForm = (field) => (event) => {
+        const value = field === 'agree' ? event.target.checked : event.target.value;
+        setForm((prev) => ({ ...prev, [field]: value }));
+        setStatus({ ok: false, errors: [] });
+      };
+
+      const handleSubmit = (event) => {
+        event.preventDefault();
+        const problems = [];
+        if (form.name.trim().length < 2) problems.push('お名前は2文字以上で入力してください。');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) problems.push('メールアドレスの形式が正しくありません。');
+        if (form.password.length < 8) problems.push('パスワードは8文字以上にしてください。');
+        if (form.password !== form.passwordConfirm) problems.push('パスワード（確認）が一致しません。');
+        if (!form.agree) problems.push('利用規約に同意してください。');
+
+        if (problems.length) {
+          setStatus({ ok: false, errors: problems });
+          return;
+        }
+
+        if (window.amplitude?.getInstance) {
+          const props = {
+            experiment_bucket: form.expBucket,
+            email_domain: form.email.split('@')[1] || '',
+          };
+          window.amplitude.getInstance().logEvent('signup_submitted', props);
+        }
+
+        setStatus({ ok: true, errors: [] });
+        setForm(initialForm());
+        setShowPassword(false);
+      };
+
+      const pwStyle = {
+        width: `${pwScore}%`,
+        background: pwState.color,
+      };
+
+      return (
+        <main className="wrap" role="main" aria-labelledby="title">
+          <h1 id="title">登録フォーム（React SPA）</h1>
+          <p className="desc">Reactで実装したクライアントサイドのみのデモです。送信すると成功メッセージを表示します。</p>
+
+          <div
+            className="ok"
+            role="status"
+            aria-live="polite"
+            style={{ display: status.ok ? 'block' : 'none' }}
+          >
+            登録に成功しました（ダミー）。計測イベントを送信しました。
+          </div>
+          <div
+            className="errors"
+            role="alert"
+            aria-live="assertive"
+            style={{ display: status.errors.length ? 'block' : 'none' }}
+          >
+            {status.errors.map((msg, idx) => (
+              <div key={`${msg}-${idx}`}>• {msg}</div>
+            ))}
+          </div>
+
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="field">
+              <label htmlFor="name">お名前<span className="req">＊</span></label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                inputMode="text"
+                required
+                minLength={2}
+                maxLength={60}
+                placeholder="山田 太郎"
+                value={form.name}
+                onChange={updateForm('name')}
+              />
+              <div className="hint">2〜60文字</div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="email">メールアドレス<span className="req">＊</span></label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={updateForm('email')}
+              />
+              <div className="hint">有効なメール形式で入力してください</div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="password">パスワード<span className="req">＊</span></label>
+              <div className="row">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  placeholder="8文字以上・英大小・数字・記号を推奨"
+                  value={form.password}
+                  onChange={updateForm('password')}
+                />
+                <button
+                  type="button"
+                  className="toggle"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? '非表示' : '表示'}
+                </button>
+              </div>
+              <div className="pw-meter" aria-hidden="true">
+                <i style={pwStyle}></i>
+              </div>
+              <div className="pw-label">{pwState.label}</div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="passwordConfirm">パスワード（確認）<span className="req">＊</span></label>
+              <input
+                id="passwordConfirm"
+                name="passwordConfirm"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={form.passwordConfirm}
+                onChange={updateForm('passwordConfirm')}
+              />
+            </div>
+
+            <div className="terms">
+              <input
+                id="agree"
+                name="agree"
+                type="checkbox"
+                required
+                checked={form.agree}
+                onChange={updateForm('agree')}
+              />
+              <label htmlFor="agree">利用規約に同意します</label>
+            </div>
+
+            <button id="submit" type="submit">登録する</button>
+            <input
+              type="hidden"
+              id="expBucket"
+              name="expBucket"
+              value={form.expBucket}
+              data-amplitude-prop="experiment_bucket"
+            />
+          </form>
+
+          <footer>© <span>{currentYear}</span> Experiment Form</footer>
+        </main>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
